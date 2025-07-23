@@ -14,6 +14,20 @@ do
   end
 end
 
+function coords.log(type, msg)
+  if type == "info" then
+    print("[coordsplus] "..msg)
+  elseif type == "action" then
+    core.log("action", "[coordsplus]: "..msg)
+  elseif type == "warn" then
+    core.log("warning", "[coordsplus]: "..msg)
+  elseif type == "error" then
+    core.log("error", "[coordsplus]: "..msg)
+  elseif type == "fatal" then
+    error(msg)
+  end
+end
+
 function coords.save_all()
   local f = io.open(file_path, "w")
   if not f then return false end
@@ -30,7 +44,7 @@ function coords.erase_db()
 end
 
 local function ensure_player(name)
-  if not data[name] then data[name] = {} end
+  if not data[name] then data[name] = {} coords.log("action", "Created entry for '"..name.."' in the coords database.") end
 end
 
 function coords.set_coord(name, key, pos)
@@ -39,6 +53,7 @@ function coords.set_coord(name, key, pos)
     return false, "ERROR: That name already exists!"
   end
   data[name][key] = {x = pos.x, y = pos.y, z = pos.z}
+  coords.log("action", "Player '"..name.."' created coord with name '"..key.."' at "..pos.x..","..pos.y..","..pos.z..".")
   return coords.save_all()
 end
 
@@ -47,6 +62,7 @@ function coords.move_coord(name, key, pos)
   ensure_player(name)
   if data[name][key] then
     data[name][key] = { x = pos.x, y = pos.y, z = pos.z }
+    coords.log("action", "Player '"..name.."' moved coord with name '"..key.."' to "..pos.x..","..pos.y..","..pos.z..".")
     return coords.save_all()
   end
   return false, "ERROR: No such coordinate to move"
@@ -62,6 +78,7 @@ function coords.rename_coord(name, oldkey, newkey)
   end
   data[name][newkey] = data[name][oldkey]
   data[name][oldkey] = nil
+  coords.log("action", "Player '"..name.."' renamed coord with name '"..oldkey.."' to '"..newkey.."'.")
   return coords.save_all()
 end
 
@@ -69,6 +86,7 @@ function coords.delete_coord(name, key)
   ensure_player(name)
   if data[name][key] then
     data[name][key] = nil
+    coords.log("action", "Player '"..name.."' deleted coord with name '"..key.."'.")
     return coords.save_all()
   end
   return false, "ERROR: No such coordinate to delete"
@@ -161,7 +179,7 @@ core.register_chatcommand("coords", {
     elseif action == "list" then
       if args[2] then 
         local ok, lines, msg = coords.list_coords(args[2])
-        if core.check_player_privs(name, {coords_admin = true}) == false then return false, "You are not a coords admin!" end
+        if core.check_player_privs(name, {coords_admin = true}) == false then return false, "ERROR: You are not a coords admin!" end
         if not lines then return false, "ERROR: User has no coords saved" end
         return ok, ok and "Saved coords:\n" .. table.concat(lines, "\n") or msg
       elseif not args[2] then
@@ -173,7 +191,7 @@ core.register_chatcommand("coords", {
 
     --Teleport
     elseif action == "teleport" or action == "tp" then
-      if core.check_player_privs(name, { teleport = true }) == false then return false, "You cannot tp without the teleport privilege!" end
+      if core.check_player_privs(name, { teleport = true }) == false then return false, "ERROR: You cannot tp without the teleport privilege!" end
       local ok, msg = tp_coord(name, args[2])
       return ok, ok and "Teleport success!" or msg
     else
@@ -187,3 +205,4 @@ core.register_chatcommand("coords", {
     end
   end,
 })
+coords.log("info", "mod loaded!")
